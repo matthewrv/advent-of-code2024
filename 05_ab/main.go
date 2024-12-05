@@ -5,32 +5,45 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	rules, updates := readInput("input.txt")
-	// fmt.Printf("%v\n%v\n", rules, updates)
-	result := findValidUpdates(rules, updates)
+	order, updates := readInput("input.txt")
+	// fmt.Printf("%v\n%+v\n", updates, order)
+	// result := findValidUpdates(order, updates)
+	result := fixInvalidUpdates(order, updates)
 	fmt.Printf("Result: %d\n", result)
 }
 
 // helper struct
 
-type Set map[int]bool
-
-func add(set Set, value int) {
-	set[value] = true
+type PagePair struct {
+	page1 int
+	page2 int
 }
 
-func in(set Set, value int) bool {
-	return set[value]
+type PageOrdering struct {
+	order map[PagePair]int
+}
+
+func (order *PageOrdering) comparePages(page1 int, page2 int) int {
+	return order.order[PagePair{page1, page2}]
+}
+
+// helper func
+
+func getUpdateMid(update []int) int {
+	mid := len(update) / 2
+	fmt.Printf("Middle %d, array %v\n", update[mid], update)
+	return update[mid]
 }
 
 // read input
 
-func readInput(fileName string) (rules map[int]Set, updates [][]int) {
+func readInput(fileName string) (pageOrder PageOrdering, updates [][]int) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal(err)
@@ -41,7 +54,7 @@ func readInput(fileName string) (rules map[int]Set, updates [][]int) {
 		}
 	}()
 
-	rules = map[int]Set{}
+	pageOrder.order = map[PagePair]int{}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() && len(scanner.Text()) != 0 {
 		var (
@@ -50,10 +63,9 @@ func readInput(fileName string) (rules map[int]Set, updates [][]int) {
 			a, _   = strconv.Atoi(tokens[0])
 			b, _   = strconv.Atoi(tokens[1])
 		)
-		if rules[b] == nil {
-			rules[b] = Set{}
-		}
-		add(rules[b], a)
+
+		pageOrder.order[PagePair{a, b}] = -1
+		pageOrder.order[PagePair{b, a}] = 1
 	}
 
 	for scanner.Scan() {
@@ -69,27 +81,41 @@ func readInput(fileName string) (rules map[int]Set, updates [][]int) {
 		updates = append(updates, update)
 	}
 
-	return rules, updates
+	return pageOrder, updates
 }
 
-// find valid updates according to rules and return sum of middle elements
-func findValidUpdates(rules map[int]Set, updates [][]int) (total int) {
+// Part 1
+
+// find valid updates according to ordering and return sum of middle elements
+func findValidUpdates(pageOrder PageOrdering, updates [][]int) (total int) {
 	for _, update := range updates {
-		total += checkOneUpdate(rules, update)
+		total += checkOneUpdate(pageOrder, update)
 	}
 	return total
 }
 
-func checkOneUpdate(rules map[int]Set, update []int) int {
-	for idx, page := range update {
-		for i := 0; i < idx; i++ {
-			if in(rules[update[i]], page) {
-				return 0
-			}
-		}
+// check if update is correct and if so - return middle element, otherwise return 0
+func checkOneUpdate(pageOrder PageOrdering, update []int) int {
+	if slices.IsSortedFunc(update, pageOrder.comparePages) {
+		return getUpdateMid(update)
 	}
 
-	mid := len(update) / 2
-	fmt.Printf("Middle %d, array %v\n", update[mid], update)
-	return update[mid]
+	return 0
+}
+
+// Part 2
+
+func fixInvalidUpdates(pageOrder PageOrdering, updates [][]int) (total int) {
+	for _, update := range updates {
+		if checkOneUpdate(pageOrder, update) == 0 {
+			total += fixOneUpdate(pageOrder, update)
+		}
+	}
+	return total
+}
+
+// fix sorting of update and return value of middle element
+func fixOneUpdate(pageOrder PageOrdering, update []int) int {
+	slices.SortFunc(update, pageOrder.comparePages)
+	return getUpdateMid(update)
 }
