@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	obstructionsMap, position, direction := readInput("input.txt")
-	visited := countVisitedPositions(obstructionsMap, position, direction)
+	size, obstructionsMap, position, direction := readInput("input.txt")
+	visited := countVisitedPositions(size, obstructionsMap, position, direction)
 	fmt.Printf("Result: %d\n", visited)
 }
 
@@ -26,7 +26,7 @@ func (v1 *vector) Sum(v2 *vector) vector {
 
 // read input
 
-func readInput(fileName string) (obstructionsMap [][]bool, position vector, direction vector) {
+func readInput(fileName string) (size vector, obstructionsMap map[vector]bool, position vector, direction vector) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		log.Fatal(err)
@@ -39,13 +39,13 @@ func readInput(fileName string) (obstructionsMap [][]bool, position vector, dire
 
 	scanner := bufio.NewScanner(f)
 	line := 0
+	obstructionsMap = map[vector]bool{}
 	for scanner.Scan() {
 		row := scanner.Text()
-		obstructionsMap = append(obstructionsMap, make([]bool, len(row)))
 		for col, token := range row {
 			switch token {
 			case '#':
-				obstructionsMap[line][col] = true
+				obstructionsMap[vector{col, line}] = true
 			case '^':
 				position = vector{col, line}
 				// axis are assumed to increase in direction of increasing index of array
@@ -53,20 +53,23 @@ func readInput(fileName string) (obstructionsMap [][]bool, position vector, dire
 			}
 		}
 
+		size.x = len(row)
 		line++
 	}
 
-	return obstructionsMap, position, direction
+	size.y = line + 1
+
+	return size, obstructionsMap, position, direction
 }
 
 // part 1
 
-func countVisitedPositions(obstructionsMap [][]bool, position vector, direction vector) int {
+func countVisitedPositions(size vector, obstructionsMap map[vector]bool, position vector, direction vector) int {
 	visitedPositions := map[vector]bool{}
 	visitedPositions[position] = true
 
-	gridSizeX := len(obstructionsMap[0])
-	gridSizeY := len(obstructionsMap)
+	gridSizeX := size.x
+	gridSizeY := size.y
 
 	rotationRules := map[vector]vector{
 		{0, -1}: {1, 0},
@@ -82,7 +85,7 @@ func countVisitedPositions(obstructionsMap [][]bool, position vector, direction 
 			break
 		}
 
-		if obstructionsMap[newPosition.y][newPosition.x] {
+		if obstructionsMap[newPosition] {
 			// rotate guard
 			direction = rotationRules[direction]
 			// fmt.Println("Found obstacle, rotate.")
