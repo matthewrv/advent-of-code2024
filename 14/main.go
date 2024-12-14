@@ -3,6 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"log"
 	"os"
 	"regexp"
@@ -48,11 +51,13 @@ func readInput(fileName string) (positions [][2]int, velocities [][2]int, gridSi
 
 func calcSafetyFactor(positions [][2]int, velocities [][2]int, gridSize [2]int) (safetyFactor int) {
 	var newPositions [][2]int = make([][2]int, len(positions))
-	for range 100 {
+	for sec := range 9999 {
 		for i, position := range positions {
 			newPositions[i] = updatePosition(position, velocities[i], gridSize)
 		}
 		newPositions, positions = positions, newPositions
+
+		printPositions(sec+1, positions, gridSize)
 	}
 
 	// split
@@ -93,4 +98,20 @@ func updatePosition(position [2]int, velocity [2]int, gridSize [2]int) [2]int {
 		y = gridSize[1] + y
 	}
 	return [2]int{x, y}
+}
+
+func printPositions(iter int, positions [][2]int, gridSize [2]int) {
+	rect := image.Rect(0, 0, gridSize[0], gridSize[1])
+	palette := []color.Color{color.Black, color.RGBA{0, 144, 0, 255}}
+	img := image.NewPaletted(rect, palette)
+	for _, position := range positions {
+		img.SetColorIndex(position[0], position[1], 1)
+	}
+
+	f, err := os.Create(fmt.Sprintf("images/%04d.png", iter))
+	if err != nil {
+		log.Fatal(err)
+	}
+	png.Encode(f, img)
+	f.Close()
 }
