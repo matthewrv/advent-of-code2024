@@ -45,7 +45,7 @@ func solvePart1(fileName string) (result int) {
 		}
 		idx++
 
-		if bruteForce(total, elements[0], elements[1:]) {
+		if bruteForce2(total, elements[0], elements[1:]) {
 			result += total
 		}
 	}
@@ -55,11 +55,32 @@ func solvePart1(fileName string) (result int) {
 
 func bruteForce(total int, current int, elements []int) bool {
 	if len(elements) == 1 {
-		if current+elements[0] == total || current*elements[0] == total {
-			return true
-		}
-		return false
+		return current+elements[0] == total || current*elements[0] == total
 	}
 
 	return bruteForce(total, current+elements[0], elements[1:]) || bruteForce(total, current*elements[0], elements[1:])
+}
+
+func bruteForce2(total int, current int, elements []int) bool {
+	if current > total {
+		return false
+	}
+
+	head, tail := elements[0], elements[1:]
+
+	if len(elements) == 1 {
+		return current+head == total || current*head == total || calcAppendOp(current, head) == total
+	}
+
+	return (bruteForce2(total, current+head, tail) ||
+		bruteForce2(total, current*head, tail) ||
+		bruteForce2(total, calcAppendOp(current, head), tail))
+}
+
+func calcAppendOp(current int, toAppend int) int {
+	newVal, err := strconv.Atoi(fmt.Sprintf("%d%d", current, toAppend))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return newVal
 }
